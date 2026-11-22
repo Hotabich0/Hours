@@ -227,20 +227,32 @@
     </div>
 
     <script>
-        // --- 1. БАЗА ДАННЫХ (v7) ---
-        var savedData = localStorage.getItem('masterhour_v7');
+        // --- 1. БАЗА ДАННЫХ (v9) ---
+        var savedData = localStorage.getItem('masterhour_v9');
         var goals = savedData ? JSON.parse(savedData) : [
-            { id: 1, title: "Тест", startDate: "2026-11-22", endDate: "2050-01-01", totalSeconds: 0, isRunning: false, lastStartTime: null, history: {} }
+            { 
+                id: 1, 
+                title: "Тест", 
+                startDate: "2026-11-22", 
+                endDate: "2050-01-01", 
+                totalSeconds: 0, 
+                isRunning: false, 
+                lastStartTime: null, 
+                history: {}, 
+                sessions: []
+            }
         ];
 
         goals.forEach(function(g) {
             if (!g.history) g.history = {};
+            if (!g.sessions) g.sessions = [];
         });
 
         var timerInterval;
         var currentDetailId = null;
+        var currentDetailTab = 'stats'; 
 
-        function saveData() { localStorage.setItem('masterhour_v7', JSON.stringify(goals)); }
+        function saveData() { localStorage.setItem('masterhour_v9', JSON.stringify(goals)); }
 
         // --- 2. ВСПОМОГАТЕЛЬНЫЕ ---
         function formatTime(seconds) {
@@ -264,10 +276,19 @@
             return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
         }
 
+        function formatSessionDate(timestamp) {
+            var d = new Date(timestamp);
+            var day = String(d.getDate()).padStart(2, '0');
+            var months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+            var month = months[d.getMonth()];
+            var year = d.getFullYear();
+            var hours = String(d.getHours()).padStart(2, '0');
+            var mins = String(d.getMinutes()).padStart(2, '0');
+            return day + ' ' + month + ' ' + year + ' г. ' + hours + ':' + mins;
+        }
         // --- 3. РЕНДЕР ГЛАВНОЙ ---
         function renderMain() {
             var app = document.getElementById('app-list');
-            
             if (goals.length === 0) {
                 app.innerHTML = '<p style="text-align:center; color:#777; margin-top:40px;">Нет целей.</p>';
                 return;
@@ -279,7 +300,6 @@
                     var g = goals[i];
                     var card = document.createElement('div');
                     card.className = 'card';
-                    
                     card.innerHTML = 
                         '<div class="card-header">' +
                             '<div class="card-title">' + (g.title || 'Без названия') + '</div>' +
@@ -299,7 +319,6 @@
                             '<span class="level-icon">🟢</span><span class="level-icon">🏆</span>' +
                             '<span class="level-icon">⭐</span><span class="level-icon">💎</span><span class="level-icon">👑</span>' +
                         '</div>';
-                    
                     card.onclick = function(id) {
                         return function() { openDetail(id); };
                     }(g.id);
@@ -309,12 +328,10 @@
 
             for (var j = 0; j < goals.length; j++) {
                 var goal = goals[j];
-                
                 var displaySec = goal.totalSeconds;
                 if (goal.isRunning && goal.lastStartTime) {
                     displaySec += Math.floor((Date.now() - goal.lastStartTime) / 1000);
                 }
-
                 var totalHours = displaySec / 3600;
                 var perc = Math.min((totalHours / 10000) * 100, 100).toFixed(2);
                 var lvl = getLevelIndex(totalHours);
@@ -324,21 +341,17 @@
                     if (goal.isRunning) { btn.classList.add('running'); btn.innerHTML = '⏸'; }
                     else { btn.classList.remove('running'); btn.innerHTML = '▶'; }
                 }
-                
                 var tTime = document.getElementById('txt-time-' + goal.id);
                 if (tTime) tTime.innerHTML = formatTime(displaySec) + ' / 10000 ч';
-
                 var tLvl = document.getElementById('txt-level-' + goal.id);
                 if (tLvl) {
                     var lvlNames = ['Начинающий', 'Любитель', 'Опытный', 'Профи', 'Эксперт', 'Мастер'];
                     tLvl.innerHTML = lvlNames[lvl];
                 }
-
                 var bar = document.getElementById('bar-' + goal.id);
                 if (bar) bar.style.width = perc + '%';
                 var tPerc = document.getElementById('txt-perc-' + goal.id);
                 if (tPerc) tPerc.innerHTML = perc + '%';
-
                 var iconsBox = document.getElementById('icons-' + goal.id);
                 if (iconsBox) {
                     var icons = iconsBox.children;
@@ -363,7 +376,6 @@
             if (goal.isRunning && goal.lastStartTime) {
                 displaySec += Math.floor((Date.now() - goal.lastStartTime) / 1000);
             }
-            
             document.getElementById('detail-total-time').innerHTML = formatTime(displaySec) + ' / 10000 ч';
             
             var totalHours = displaySec / 3600;
@@ -381,36 +393,98 @@
                 else iconsBox[k].classList.remove('active');
             }
 
+            var chartContainer = document.querySelector('.chart-container');
+            var levelsIcons = document.getElementById('detail-levels-icons');
+            var progBar = document.querySelector('.progress-bar-bg');
+            var progText = document.getElementById('detail-prog-text');
             var chartBars = document.getElementById('chart-bars');
-            chartBars.innerHTML = '';
-            var days = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
-            var total7Sec = 0;
-            
-            for (var i = 6; i >= 0; i--) {
-                var d = new Date();
-                d.setDate(d.getDate() - i);
-                var dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-                var dayName = days[d.getDay()];
-                
-                var sec = (goal.history && goal.history[dateStr]) ? goal.history[dateStr] : 0;
-                total7Sec += sec;
-                
-                var barHeight = 0;
-                if (sec > 0) barHeight = Math.min((sec / 3600) * 100, 100);
 
-                var wrapper = document.createElement('div');
-                wrapper.className = 'bar-wrapper';
-                wrapper.innerHTML = '<div class="bar ' + (sec === 0 ? 'empty' : '') + '" style="height: ' + barHeight + '%"></div>' +
-                                    '<div class="bar-label">' + dayName + '</div>';
-                chartBars.appendChild(wrapper);
+            if (currentDetailTab === 'stats') {
+                chartContainer.style.display = 'block';
+                levelsIcons.style.display = 'flex';
+                progBar.style.display = 'block';
+                progText.style.display = 'block';
+
+                chartBars.innerHTML = '';
+                chartBars.style.display = 'flex';
+                chartBars.style.height = '100%';
+
+                var days = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+                var total7Sec = 0;
+                
+                for (var i = 6; i >= 0; i--) {
+                    var d = new Date();
+                    d.setDate(d.getDate() - i);
+                    var dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+                    var dayName = days[d.getDay()];
+                    var sec = (goal.history && goal.history[dateStr]) ? goal.history[dateStr] : 0;
+                    total7Sec += sec;
+                    var barHeight = 0;
+                    if (sec > 0) barHeight = Math.min((sec / 3600) * 100, 100);
+
+                    var wrapper = document.createElement('div');
+                    wrapper.className = 'bar-wrapper';
+                    wrapper.innerHTML = '<div class="bar ' + (sec === 0 ? 'empty' : '') + '" style="height: ' + barHeight + '%"></div>' +
+                                        '<div class="bar-label">' + dayName + '</div>';
+                    chartBars.appendChild(wrapper);
+                }
+                document.getElementById('chart-total').innerHTML = formatTime(total7Sec);
+            } 
+            else if (currentDetailTab === 'history') {
+                chartContainer.style.display = 'block';
+                levelsIcons.style.display = 'none';
+                progBar.style.display = 'none';
+                progText.style.display = 'none';
+
+                chartBars.innerHTML = '';
+                chartBars.style.display = 'block';
+                chartBars.style.height = 'auto';
+
+                if (!goal.sessions || goal.sessions.length === 0) {
+                    chartBars.innerHTML = '<p style="text-align:center; color:#777; margin-top:20px;">История пуста</p>';
+                } else {
+                    var reversedSessions = goal.sessions.slice().reverse();
+                    for (var s = 0; s < reversedSessions.length; s++) {
+                        var session = reversedSessions[s];
+                        var item = document.createElement('div');
+                        item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding: 12px 0; border-bottom: 1px solid #eee;';
+                        item.innerHTML = 
+                            '<div>' +
+                                '<div style="font-weight:600; font-size:15px; margin-bottom:4px;">+ ' + formatTime(session.duration) + '</div>' +
+                                '<div style="font-size:13px; color:#777;">' + formatSessionDate(session.endTime) + '</div>' +
+                            '</div>' +
+                            '<button onclick="deleteSession(' + goal.id + ', ' + session.endTime + ')" style="background:none; border:none; font-size:20px; color:#d32f2f; cursor:pointer;">×</button>';
+                        chartBars.appendChild(item);
+                    }
+                }
+                document.getElementById('chart-total').innerHTML = '';
             }
-            
-            document.getElementById('chart-total').innerHTML = formatTime(total7Sec);
         }
 
-        // --- 5. НАВИГАЦИЯ ---
+        // --- 5. ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ---
+        var tabs = document.querySelectorAll('.tab');
+        for (var t = 0; t < tabs.length; t++) {
+            tabs[t].onclick = function() {
+                for (var k = 0; k < tabs.length; k++) tabs[k].classList.remove('active');
+                this.classList.add('active');
+                
+                if (this.innerText.indexOf('Статистика') !== -1) {
+                    currentDetailTab = 'stats';
+                } else {
+                    currentDetailTab = 'history';
+                }
+                renderDetail();
+            };
+        }
+
+        // --- 6. НАВИГАЦИЯ ---
         window.openDetail = function(id) {
             currentDetailId = id;
+            currentDetailTab = 'stats';
+            for (var k = 0; k < tabs.length; k++) {
+                if (k === 0) tabs[k].classList.add('active');
+                else tabs[k].classList.remove('active');
+            }
             document.getElementById('view-main').classList.add('hidden');
             document.getElementById('view-detail').classList.remove('hidden');
             document.getElementById('bottom-nav').classList.add('hidden');
@@ -425,18 +499,28 @@
             renderMain();
         };
 
-        // --- 6. ЛОГИКА ---
-window.toggleTimer = function(id) {
+        // --- 7. ЛОГИКА ---
+        window.toggleTimer = function(id) {
             var goal = goals.find(function(g) { return g.id === id; });
             if (!goal) return;
 
             if (goal.isRunning) {
-                var elapsed = Math.floor((Date.now() - goal.lastStartTime) / 1000);
-                goal.totalSeconds += elapsed;
+                var now = Date.now();
+                var elapsed = Math.floor((now - goal.lastStartTime) / 1000);
                 
-                var today = getTodayStr();
-                if (!goal.history) goal.history = {}; 
-                goal.history[today] = (goal.history[today] || 0) + elapsed;
+                if (elapsed > 0) {
+                    goal.totalSeconds += elapsed;
+                    
+                    var today = getTodayStr();
+                    if (!goal.history) goal.history = {}; 
+                    goal.history[today] = (goal.history[today] || 0) + elapsed;
+                    
+                    if (!goal.sessions) goal.sessions = [];
+                    goal.sessions.push({
+                        endTime: now,
+                        duration: elapsed
+                    });
+                }
                 
                 goal.isRunning = false;
                 goal.lastStartTime = null;
@@ -450,6 +534,38 @@ window.toggleTimer = function(id) {
             else renderMain();
             
             startTimer();
+        };
+
+        window.deleteSession = function(goalId, sessionEndTime) {
+            if (!confirm("Удалить эту запись из истории?")) return;
+
+            var goal = goals.find(function(g) { return g.id === goalId; });
+            if (!goal || !goal.sessions) return;
+
+            var sessionIndex = -1;
+            var durationToSubtract = 0;
+
+            for (var i = 0; i < goal.sessions.length; i++) {
+                if (goal.sessions[i].endTime === sessionEndTime) {
+                    sessionIndex = i;
+                    durationToSubtract = goal.sessions[i].duration;
+                    break;
+                }
+            }
+
+            if (sessionIndex !== -1) {
+                goal.sessions.splice(sessionIndex, 1);
+                goal.totalSeconds = Math.max(0, goal.totalSeconds - durationToSubtract);
+                
+                var d = new Date(sessionEndTime);
+                var dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+                if (goal.history[dateStr]) {
+                    goal.history[dateStr] = Math.max(0, goal.history[dateStr] - durationToSubtract);
+                }
+                
+                saveData();
+                renderDetail();
+            }
         };
 
         window.deleteGoal = function(id) {
@@ -471,7 +587,7 @@ window.toggleTimer = function(id) {
             }
         }
 
-        // --- 7. МОДАЛКА ---
+        // --- 8. МОДАЛКА ---
         document.getElementById('btn-add-fab').onclick = function() {
             document.getElementById('goalInput').value = '';
             document.getElementById('modalOverlay').style.display = 'flex';
@@ -492,7 +608,8 @@ window.toggleTimer = function(id) {
                 totalSeconds: 0,
                 isRunning: false,
                 lastStartTime: null,
-                history: {}
+                history: {},
+                sessions: []
             });
             saveData();
             document.getElementById('modalOverlay').style.display = 'none';
