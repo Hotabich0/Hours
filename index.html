@@ -12,13 +12,14 @@
             --card-bg: #ffffff;
             --primary-color: #006d5b;
             --text-color: #333;
+            --text-muted: #777;
         }
         body {
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
-            padding-bottom: 70px;
+            padding-bottom: 80px;
         }
         /* Верхняя панель */
         .header {
@@ -28,10 +29,11 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom-left-radius: 12px;
-            border-bottom-right-radius: 12px;
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        .header h1 { margin: 0; font-size: 20px; }
+        .header h1 { margin: 0; font-size: 20px; font-weight: 600; }
         
         /* Контент */
         .content { padding: 16px; }
@@ -39,38 +41,42 @@
         /* Карточка */
         .card {
             background: var(--card-bg);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 16px;
             margin-bottom: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
-        .card-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; }
-        .card-dates { font-size: 14px; color: #777; margin-bottom: 12px; }
+        .card-title { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
+        .card-dates { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
         
         /* Таймер и управление */
         .timer-controls {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
+            gap: 12px;
+            margin-bottom: 16px;
         }
         .play-btn {
-            width: 40px; height: 40px;
+            width: 44px; height: 44px;
             border-radius: 50%;
             border: 2px solid var(--primary-color);
             background: none;
             color: var(--primary-color);
-            font-size: 18px;
+            font-size: 20px;
             display: flex; justify-content: center; align-items: center;
             cursor: pointer;
+            transition: all 0.2s;
         }
         .play-btn.running {
             background: var(--primary-color);
             color: white;
         }
+        .time-info { display: flex; flex-direction: column; }
+        .time-text { font-size: 15px; font-weight: 500; }
+        .level-text { font-size: 12px; color: var(--text-muted); }
         
         /* Прогресс-бар */
-        .progress-container { width: 100%; margin: 16px 0; }
+        .progress-container { width: 100%; margin: 12px 0; }
         .progress-bar-bg {
             height: 8px;
             background: #e0e0e0;
@@ -83,48 +89,95 @@
             width: 0%;
             transition: width 0.3s;
         }
-        .progress-text { font-size: 12px; text-align: right; margin-top: 4px; }
+        .progress-text { font-size: 12px; text-align: right; margin-top: 4px; color: var(--text-muted); }
         
         /* Уровни */
         .levels {
             display: flex;
             justify-content: space-between;
-            margin-top: 12px;
+            margin-top: 8px;
+            padding: 0 8px;
         }
         .level-icon {
-            font-size: 20px;
-            opacity: 0.3;
+            font-size: 22px;
+            opacity: 0.2;
+            transition: all 0.3s;
+            filter: grayscale(100%);
         }
-        .level-icon.active { opacity: 1; transform: scale(1.2); }
+        .level-icon.active { 
+            opacity: 1; 
+            transform: scale(1.2); 
+            filter: grayscale(0%);
+        }
 
         /* Кнопка добавления */
         .fab {
             position: fixed;
-            bottom: 80px; right: 20px;
-            width: 56px; height: 56px;
+            bottom: 90px; right: 20px;
+            width: 60px; height: 60px;
             border-radius: 50%;
             background: var(--primary-color);
             color: white;
-            font-size: 24px;
+            font-size: 28px;
             border: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,109,91,0.3);
             cursor: pointer;
             display: flex; justify-content: center; align-items: center;
+            z-index: 10;
         }
         
         /* Нижнее меню */
         .bottom-nav {
             position: fixed;
             bottom: 0; left: 0; right: 0;
-            height: 60px;
+            height: 70px;
             background: white;
             display: flex;
             justify-content: space-around;
             align-items: center;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            padding-bottom: env(safe-area-inset-bottom); /* Для iPhone */
         }
-        .nav-item { font-size: 24px; color: #ccc; cursor: pointer; }
-        .nav-item.active { color: var(--primary-color); }
+        .nav-item { font-size: 26px; cursor: pointer; opacity: 0.4; }
+        .nav-item.active { opacity: 1; }
+
+        /* Модальное окно */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            width: 80%;
+            max-width: 320px;
+        }
+        .modal h2 { margin-top: 0; font-size: 18px; }
+        .modal input {
+            width: 100%;
+            padding: 12px;
+            margin: 12px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; }
+        .modal-buttons button {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .btn-cancel { background: #eee; color: #333; }
+        .btn-add { background: var(--primary-color); color: white; }
     </style>
 </head>
 <body>
@@ -137,11 +190,11 @@
 
     <!-- Контент -->
     <div class="content" id="app">
-        <!-- Карточка будет рендериться здесь -->
+        <!-- Карточки будут рендериться здесь -->
     </div>
 
     <!-- Кнопка добавления -->
-    <button class="fab" onclick="addNewGoal()">+</button>
+    <button class="fab" onclick="openModal()">+</button>
 
     <!-- Нижнее меню -->
     <div class="bottom-nav">
@@ -150,14 +203,30 @@
         <div class="nav-item">⚙️</div>
     </div>
 
-    <script>
-        // Инициализация Telegram Web App
-        const tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем на весь экран
-        tg.setHeaderColor('#006d5b'); // Цвет шапки под стиль приложения
+    <!-- Модальное окно -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h2>Новая цель</h2>
+            <input type="text" id="goalInput" placeholder="Например: Учить Python" autocomplete="off">
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeModal()">Отмена</button>
+                <button class="btn-add" onclick="addNewGoal()">Добавить</button>
+            </div>
+        </div>
+    </div>
 
-        // Данные (в реальном приложении тут будет база данных)
-        let goals = JSON.parse(localStorage.getItem('goals')) || [
+    <script>
+        // --- Инициализация Telegram Web App ---
+        const tg = window.Telegram.WebApp;
+        tg.expand(); 
+        tg.setHeaderColor('#006d5b'); 
+        // Включаем тактильный отклик (вибрацию) при нажатиях (если поддерживается)
+        const haptic = tg.HapticFeedback;
+
+        // --- Данные ---
+        // Пытаемся загрузить из localStorage, если пусто - создаем тестовую
+        let savedGoals = localStorage.getItem('goals');
+        let goals = savedGoals ? JSON.parse(savedGoals) : [
             {
                 id: 1,
                 title: "Любить лешу",
@@ -171,39 +240,42 @@
 
         let timerInterval;
 
-        // Функция сохранения
+        // --- Функции ---
+
         function save() {
             localStorage.setItem('goals', JSON.stringify(goals));
         }
 
-        // Определение уровня
         function getLevel(hours) {
-            if (hours >= 10000) return 5; // Мастер
-            if (hours >= 5000) return 4;  // Эксперт
-            if (hours >= 2000) return 3;  // Профи
-            if (hours >= 500) return 2;   // Опытный
-            if (hours >= 100) return 1;   // Любитель
-            return 0;                     // Новичок
+            if (hours >= 10000) return 5;
+            if (hours >= 5000) return 4;
+            if (hours >= 2000) return 3;
+            if (hours >= 500) return 2;
+            if (hours >= 100) return 1;
+            return 0;
         }
 
-        // Форматирование времени
         function formatTime(seconds) {
             const h = Math.floor(seconds / 3600);
             const m = Math.floor((seconds % 3600) / 60);
             return `${h} ч ${m} мин`;
         }
 
-        // Отрисовка интерфейса
+        // --- UI Отрисовка ---
         function render() {
             const app = document.getElementById('app');
             app.innerHTML = '';
+
+            if (goals.length === 0) {
+                app.innerHTML = '<p style="text-align:center; color:#777; margin-top:40px;">Нет активных целей. Нажмите + чтобы добавить.</p>';
+                return;
+            }
 
             goals.forEach(goal => {
                 const totalHours = goal.totalSeconds / 3600;
                 const percent = Math.min((totalHours / 10000) * 100, 100).toFixed(2);
                 const currentLevel = getLevel(totalHours);
 
-                // Если таймер запущен, считаем время в реальном времени
                 let displaySeconds = goal.totalSeconds;
                 if (goal.isRunning && goal.lastStartTime) {
                     displaySeconds += Math.floor((Date.now() - goal.lastStartTime) / 1000);
@@ -219,9 +291,9 @@
                         <button class="play-btn ${goal.isRunning ? 'running' : ''}" onclick="toggleTimer(${goal.id})">
                             ${goal.isRunning ? '⏸' : '▶'}
                         </button>
-                        <div>
-                            <div>${formatTime(displaySeconds)} / 10000 ч</div>
-                            <div style="font-size: 12px; color: #777;">Уровень: ${['Начинающий', 'Любитель', 'Опытный', 'Профи', 'Эксперт', 'Мастер'][currentLevel]}</div>
+                        <div class="time-info">
+                            <div class="time-text">${formatTime(displaySeconds)} / 10000 ч</div>
+                            <div class="level-text">Уровень: ${['Начинающий', 'Любитель', 'Опытный', 'Профи', 'Эксперт', 'Мастер'][currentLevel]}</div>
                         </div>
                     </div>
 
@@ -244,17 +316,17 @@
             });
         }
 
-        // Управление таймером
+        // --- Логика ---
         function toggleTimer(id) {
+            if(haptic) haptic.impactOccurred('light');
+            
             const goal = goals.find(g => g.id === id);
             
             if (goal.isRunning) {
-                // Останавливаем
                 goal.isRunning = false;
                 goal.totalSeconds += Math.floor((Date.now() - goal.lastStartTime) / 1000);
                 goal.lastStartTime = null;
             } else {
-                // Запускаем
                 goal.isRunning = true;
                 goal.lastStartTime = Date.now();
             }
@@ -264,7 +336,6 @@
             startTicking();
         }
 
-        // Обновление таймера на экране каждую секунду
         function startTicking() {
             clearInterval(timerInterval);
             if (goals.some(g => g.isRunning)) {
@@ -274,27 +345,46 @@
             }
         }
 
-        // Добавление новой цели
-        function addNewGoal() {
-            const title = prompt("Введите название цели/навыка:");
-            if (title) {
-                goals.push({
-                    id: Date.now(),
-                    title: title,
-                    startDate: new Date().toISOString().split('T')[0],
-                    endDate: "2050-01-01",
-                    totalSeconds: 0,
-                    isRunning: false,
-                    lastStartTime: null
-                });
-                save();
-                render();
-            }
+        // Модальное окно
+        function openModal() {
+            if(haptic) haptic.impactOccurred('light');
+            document.getElementById('goalInput').value = '';
+            document.getElementById('modalOverlay').style.display = 'flex';
+            // Фокусируемся на инпуте
+            setTimeout(() => document.getElementById('goalInput').focus(), 100);
         }
 
-        // Первичная отрисовка
+        function closeModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+        }
+
+        function addNewGoal() {
+            const title = document.getElementById('goalInput').value.trim();
+            if (!title) return alert("Введите название цели");
+
+            goals.push({
+                id: Date.now(),
+                title: title,
+                startDate: new Date().toISOString().split('T')[0],
+                endDate: "2050-01-01",
+                totalSeconds: 0,
+                isRunning: false,
+                lastStartTime: null
+            });
+            
+            if(haptic) haptic.notificationOccurred('success');
+            save();
+            closeModal();
+            render();
+        }
+
+        // --- Инициализация при запуске ---
         render();
         startTicking();
+        
+        // Сохраняем тестовую задачу, если её не было
+        if (!savedGoals) save();
+
     </script>
 </body>
 </html>
