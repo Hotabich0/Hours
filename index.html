@@ -163,7 +163,7 @@
         <div class="header-detail">
             <button class="back-btn" id="btn-back">←</button>
             <h1 id="detail-title">Название</h1>
-            <span style="width:24px;"></span> <!-- Для симметрии -->
+            <span style="width:24px;"></span>
         </div>
 
         <div class="content">
@@ -227,16 +227,21 @@
     </div>
 
     <script>
-        // --- 1. БАЗА ДАННЫХ (v5) ---
-        var savedData = localStorage.getItem('masterhour_v5');
+        // --- 1. БАЗА ДАННЫХ (v6) ---
+        var savedData = localStorage.getItem('masterhour_v6');
         var goals = savedData ? JSON.parse(savedData) : [
             { id: 1, title: "Тест", startDate: "2026-11-22", endDate: "2050-01-01", totalSeconds: 0, isRunning: false, lastStartTime: null, history: {} }
         ];
 
+        // Проверка на наличие истории (для старых данных)
+        goals.forEach(function(g) {
+            if (!g.history) g.history = {};
+        });
+
         var timerInterval;
         var currentDetailId = null;
 
-        function saveData() { localStorage.setItem('masterhour_v5', JSON.stringify(goals)); }
+        function saveData() { localStorage.setItem('masterhour_v6', JSON.stringify(goals)); }
 
         // --- 2. ВСПОМОГАТЕЛЬНЫЕ ---
         function formatTime(seconds) {
@@ -427,9 +432,12 @@
             if (goal.isRunning) {
                 var elapsed = Math.floor((Date.now() - goal.lastStartTime) / 1000);
                 goal.totalSeconds += elapsed;
+                
+                // Запись в историю с защитой
                 var today = getTodayStr();
-                if(!goal.history) goal.history = {};
+                if (!goal.history) goal.history = {}; 
                 goal.history[today] = (goal.history[today] || 0) + elapsed;
+                
                 goal.isRunning = false;
                 goal.lastStartTime = null;
             } else {
@@ -437,8 +445,10 @@
                 goal.lastStartTime = Date.now();
             }
             saveData();
+            
             if (currentDetailId === id) renderDetail();
             else renderMain();
+            
             startTimer();
         };
 
