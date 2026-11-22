@@ -7,25 +7,40 @@
     <!-- Подключаем Telegram Web App SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --bg-color: #f5f5f5;
-            --card-bg: #ffffff;
-            --primary-color: #006d5b;
-            --text-color: #333;
-            --text-muted: #777;
-        }
-        * { box-sizing: border-box; }
-        body {
+        /* Принудительно задаем цвета фона для всего документа */
+        html, body {
             margin: 0;
+            padding: 0;
+            background-color: #f5f5f5; /* Светлый фон по умолчанию */
+            color: #333;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            min-height: 100vh;
             padding-bottom: 80px;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent; /* Убираем синюю рамку при нажатии на iOS */
         }
-        
+
+        /* Поддержка темной темы для iOS */
+        @media (prefers-color-scheme: dark) {
+            html, body {
+                background-color: #1a1a1a; /* Темный фон */
+                color: #ffffff;
+            }
+            .card {
+                background-color: #2c2c2c;
+                color: #ffffff;
+            }
+            .card-dates { color: #aaa; }
+            .modal { background: #2c2c2c; color: #fff; }
+            .modal input { background: #1a1a1a; color: #fff; border-color: #444; }
+            .bottom-nav { background: #2c2c2c; }
+            .level-icon { filter: grayscale(100%) brightness(0.5); }
+            .level-icon.active { filter: grayscale(0%) brightness(1); }
+        }
+
         /* Верхняя панель */
         .header {
-            background-color: var(--primary-color);
+            background-color: #006d5b;
             color: white;
             padding: 16px;
             display: flex;
@@ -33,7 +48,6 @@
             align-items: center;
             border-bottom-left-radius: 16px;
             border-bottom-right-radius: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         .header h1 { margin: 0; font-size: 20px; font-weight: 600; }
         
@@ -42,185 +56,105 @@
         
         /* Карточка */
         .card {
-            background: var(--card-bg);
+            background: #ffffff;
             border-radius: 16px;
             padding: 16px;
             margin-bottom: 16px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: background-color 0.3s;
         }
         .card-title { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
-        .card-dates { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+        .card-dates { font-size: 13px; color: #777; margin-bottom: 16px; }
         
-        /* Таймер и управление */
-        .timer-controls {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
+        /* Таймер */
+        .timer-controls { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
         .play-btn {
             width: 44px; height: 44px;
             border-radius: 50%;
-            border: 2px solid var(--primary-color);
+            border: 2px solid #006d5b;
             background: none;
-            color: var(--primary-color);
+            color: #006d5b;
             font-size: 20px;
             display: flex; justify-content: center; align-items: center;
             cursor: pointer;
-            transition: all 0.2s;
         }
-        .play-btn.running {
-            background: var(--primary-color);
-            color: white;
-        }
+        .play-btn.running { background: #006d5b; color: white; }
         .time-info { display: flex; flex-direction: column; }
         .time-text { font-size: 15px; font-weight: 500; }
-        .level-text { font-size: 12px; color: var(--text-muted); }
+        .level-text { font-size: 12px; color: #777; }
         
-        /* Прогресс-бар */
-        .progress-container { width: 100%; margin: 12px 0; }
-        .progress-bar-bg {
-            height: 8px;
-            background: #e0e0e0;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .progress-bar-fill {
-            height: 100%;
-            background: var(--primary-color);
-            width: 0%;
-            transition: width 0.3s;
-        }
-        .progress-text { font-size: 12px; text-align: right; margin-top: 4px; color: var(--text-muted); }
+        /* Прогресс */
+        .progress-bar-bg { height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: #006d5b; width: 0%; transition: width 0.3s; }
+        .progress-text { font-size: 12px; text-align: right; margin-top: 4px; color: #777; }
         
         /* Уровни */
-        .levels {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 8px;
-            padding: 0 8px;
-        }
-        .level-icon {
-            font-size: 22px;
-            opacity: 0.2;
-            transition: all 0.3s;
-            filter: grayscale(100%);
-        }
-        .level-icon.active { 
-            opacity: 1; 
-            transform: scale(1.2); 
-            filter: grayscale(0%);
-        }
+        .levels { display: flex; justify-content: space-between; margin-top: 8px; padding: 0 8px; }
+        .level-icon { font-size: 22px; opacity: 0.3; transition: all 0.3s; }
+        .level-icon.active { opacity: 1; transform: scale(1.2); }
 
         /* Кнопка добавления */
         .fab {
-            position: fixed;
-            bottom: 90px; right: 20px;
+            position: fixed; bottom: 90px; right: 20px;
             width: 60px; height: 60px;
-            border-radius: 50%;
-            background: var(--primary-color);
-            color: white;
-            font-size: 28px;
-            border: none;
-            box-shadow: 0 4px 12px rgba(0,109,91,0.3);
-            cursor: pointer;
-            display: flex; justify-content: center; align-items: center;
-            z-index: 10;
+            border-radius: 50%; background: #006d5b; color: white;
+            font-size: 28px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            cursor: pointer; display: flex; justify-content: center; align-items: center; z-index: 10;
         }
         
         /* Нижнее меню */
         .bottom-nav {
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
-            height: 70px;
-            background: white;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-            padding-bottom: env(safe-area-inset-bottom);
+            position: fixed; bottom: 0; left: 0; right: 0; height: 70px;
+            background: white; display: flex; justify-content: space-around; align-items: center;
+            padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
         }
-        .nav-item { font-size: 26px; cursor: pointer; opacity: 0.4; }
+        .nav-item { font-size: 26px; opacity: 0.4; }
         .nav-item.active { opacity: 1; }
 
         /* Модальное окно */
         .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 100;
         }
-        .modal {
-            background: white;
-            padding: 24px;
-            border-radius: 16px;
-            width: 80%;
-            max-width: 320px;
-        }
+        .modal { background: white; padding: 24px; border-radius: 16px; width: 80%; max-width: 320px; }
         .modal h2 { margin-top: 0; font-size: 18px; }
         .modal input {
-            width: 100%;
-            padding: 12px;
-            margin: 12px 0;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            box-sizing: border-box;
+            width: 100%; padding: 12px; margin: 12px 0; border: 1px solid #ddd;
+            border-radius: 8px; font-size: 16px; box-sizing: border-box; background: #fff; color: #000;
         }
         .modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; }
-        .modal-buttons button {
-            padding: 10px 16px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-        }
+        .modal-buttons button { padding: 10px 16px; border: none; border-radius: 8px; font-size: 14px; }
         .btn-cancel { background: #eee; color: #333; }
-        .btn-add { background: var(--primary-color); color: white; }
+        .btn-add { background: #006d5b; color: white; }
 
-        /* Блок для вывода ошибок */
         #error-log {
-            display: none;
-            background: #ffebee;
-            color: #c62828;
-            padding: 10px;
-            font-size: 12px;
-            margin: 10px;
-            border-radius: 8px;
-            white-space: pre-wrap;
+            display: none; background: #ffebee; color: #c62828; padding: 10px;
+            font-size: 12px; margin: 10px; border-radius: 8px; position: relative; z-index: 999;
         }
     </style>
 </head>
 <body>
 
-    <!-- Блок для вывода ошибок на экран -->
     <div id="error-log"></div>
+    
+    <!-- Заглушка, чтобы не было черного экрана -->
+    <div id="loading" style="text-align: center; padding: 50px; font-size: 18px; color: #777;">Загрузка...</div>
 
-    <!-- Шапка -->
     <div class="header">
         <h1>Главная</h1>
         <span>👑</span>
     </div>
 
-    <!-- Контент -->
-    <div class="content" id="app">
-        <!-- Карточки будут рендериться здесь -->
-    </div>
+    <div class="content" id="app"></div>
 
-    <!-- Кнопка добавления -->
     <button class="fab" id="btn-add-fab">+</button>
 
-    <!-- Нижнее меню -->
     <div class="bottom-nav">
         <div class="nav-item active">🏠</div>
         <div class="nav-item">📊</div>
         <div class="nav-item">⚙️</div>
     </div>
 
-    <!-- Модальное окно -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal">
             <h2>Новая цель</h2>
@@ -233,55 +167,37 @@
     </div>
 
     <script>
-        // Перехватываем ошибки и выводим их на экран, чтобы не гадать
         window.onerror = function(msg, url, line) {
-            const errorLog = document.getElementById('error-log');
-            errorLog.style.display = 'block';
-            errorLog.innerText = 'Ошибка JS:\n' + msg + '\nСтрока: ' + line;
+            document.getElementById('error-log').style.display = 'block';
+            document.getElementById('error-log').innerText = 'Ошибка JS:\n' + msg + '\nСтрока: ' + line;
+            document.getElementById('loading').style.display = 'none';
             return false;
         };
 
-        // --- Инициализация Telegram Web App ---
         let tg = null;
         let haptic = null;
         try {
             if (window.Telegram && window.Telegram.WebApp) {
                 tg = window.Telegram.WebApp;
                 tg.expand(); 
+                // Устанавливаем цвет шапки под цвет нашего хедера
                 tg.setHeaderColor('#006d5b'); 
                 haptic = tg.HapticFeedback;
             }
-        } catch (e) {
-            console.log("Работаем вне Telegram");
-        }
+        } catch (e) { console.log("Вне Telegram"); }
 
-        // --- Данные ---
         let savedGoals = localStorage.getItem('goals');
         let goals = savedGoals ? JSON.parse(savedGoals) : [
-            {
-                id: 1,
-                title: "Любить лешу",
-                startDate: "2026-11-21",
-                endDate: "2054-04-07",
-                totalSeconds: 0,
-                isRunning: false,
-                lastStartTime: null
-            }
+            { id: 1, title: "Любить лешу", startDate: "2026-11-21", endDate: "2054-04-07", totalSeconds: 0, isRunning: false, lastStartTime: null }
         ];
 
         let timerInterval;
 
-        // --- Функции ---
-        function save() {
-            localStorage.setItem('goals', JSON.stringify(goals));
-        }
+        function save() { localStorage.setItem('goals', JSON.stringify(goals)); }
 
         function getLevel(hours) {
-            if (hours >= 10000) return 5;
-            if (hours >= 5000) return 4;
-            if (hours >= 2000) return 3;
-            if (hours >= 500) return 2;
-            if (hours >= 100) return 1;
+            if (hours >= 10000) return 5; if (hours >= 5000) return 4;
+            if (hours >= 2000) return 3; if (hours >= 500) return 2; if (hours >= 100) return 1;
             return 0;
         }
 
@@ -291,9 +207,11 @@
             return `${h} ч ${m} мин`;
         }
 
-        // --- UI Отрисовка ---
         function render() {
             const app = document.getElementById('app');
+            const loading = document.getElementById('loading');
+            if(loading) loading.style.display = 'none'; // Скрываем "Загрузку"
+            
             app.innerHTML = '';
 
             if (goals.length === 0) {
@@ -316,7 +234,6 @@
                 card.innerHTML = `
                     <div class="card-title">${goal.title}</div>
                     <div class="card-dates">с ${goal.startDate} по ${goal.endDate}</div>
-                    
                     <div class="timer-controls">
                         <button class="play-btn ${goal.isRunning ? 'running' : ''}" onclick="toggleTimer(${goal.id})">
                             ${goal.isRunning ? '⏸' : '▶'}
@@ -326,14 +243,12 @@
                             <div class="level-text">Уровень: ${['Начинающий', 'Любитель', 'Опытный', 'Профи', 'Эксперт', 'Мастер'][currentLevel]}</div>
                         </div>
                     </div>
-
                     <div class="progress-container">
                         <div class="progress-bar-bg">
                             <div class="progress-bar-fill" style="width: ${percent}%"></div>
                         </div>
                         <div class="progress-text">${percent}%</div>
                     </div>
-
                     <div class="levels">
                         <span class="level-icon ${currentLevel >= 0 ? 'active' : ''}">🟢</span>
                         <span class="level-icon ${currentLevel >= 1 ? 'active' : ''}">🏆</span>
@@ -346,10 +261,8 @@
             });
         }
 
-        // --- Логика ---
         window.toggleTimer = function(id) {
             if(haptic) haptic.impactOccurred('light');
-            
             const goal = goals.find(g => g.id === id);
             if (!goal) return;
             
@@ -361,22 +274,17 @@
                 goal.isRunning = true;
                 goal.lastStartTime = Date.now();
             }
-            
-            save();
-            render();
-            startTicking();
+            save(); render(); startTicking();
         }
 
         function startTicking() {
             clearInterval(timerInterval);
             if (goals.some(g => g.isRunning)) {
-                timerInterval = setInterval(() => {
-                    render();
-                }, 1000);
+                timerInterval = setInterval(render, 1000);
             }
         }
 
-        // --- Обработчики событий ---
+        // Привязка событий
         document.getElementById('btn-add-fab').addEventListener('click', function() {
             if(haptic) haptic.impactOccurred('light');
             document.getElementById('goalInput').value = '';
@@ -390,31 +298,21 @@
 
         document.getElementById('btn-save').addEventListener('click', function() {
             const title = document.getElementById('goalInput').value.trim();
-            if (!title) {
-                alert("Введите название цели");
-                return;
-            }
+            if (!title) return alert("Введите название цели");
 
             goals.push({
-                id: Date.now(),
-                title: title,
+                id: Date.now(), title: title,
                 startDate: new Date().toISOString().split('T')[0],
-                endDate: "2050-01-01",
-                totalSeconds: 0,
-                isRunning: false,
-                lastStartTime: null
+                endDate: "2050-01-01", totalSeconds: 0, isRunning: false, lastStartTime: null
             });
-            
             if(haptic) haptic.notificationOccurred('success');
             save();
             document.getElementById('modalOverlay').style.display = 'none';
             render();
         });
 
-        // --- Инициализация при запуске ---
         render();
         startTicking();
-        
         if (!savedGoals) save();
     </script>
 </body>
