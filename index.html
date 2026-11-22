@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Skill Tracker</title>
+    <!-- Подключаем Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --primary-color: #006d5b;
+            --text-color: #333;
+        }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding-bottom: 70px;
+        }
+        /* Верхняя панель */
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+        .header h1 { margin: 0; font-size: 20px; }
+        
+        /* Контент */
+        .content { padding: 16px; }
+        
+        /* Карточка */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .card-title { font-size: 18px; font-weight: bold; margin-bottom: 8px; }
+        .card-dates { font-size: 14px; color: #777; margin-bottom: 12px; }
+        
+        /* Таймер и управление */
+        .timer-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .play-btn {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--primary-color);
+            background: none;
+            color: var(--primary-color);
+            font-size: 18px;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer;
+        }
+        .play-btn.running {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        /* Прогресс-бар */
+        .progress-container { width: 100%; margin: 16px 0; }
+        .progress-bar-bg {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .progress-text { font-size: 12px; text-align: right; margin-top: 4px; }
+        
+        /* Уровни */
+        .levels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 12px;
+        }
+        .level-icon {
+            font-size: 20px;
+            opacity: 0.3;
+        }
+        .level-icon.active { opacity: 1; transform: scale(1.2); }
+
+        /* Кнопка добавления */
+        .fab {
+            position: fixed;
+            bottom: 80px; right: 20px;
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            font-size: 24px;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+        }
+        
+        /* Нижнее меню */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 60px;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+        .nav-item { font-size: 24px; color: #ccc; cursor: pointer; }
+        .nav-item.active { color: var(--primary-color); }
+    </style>
+</head>
+<body>
+
+    <!-- Шапка -->
+    <div class="header">
+        <h1>Главная</h1>
+        <span>👑</span>
+    </div>
+
+    <!-- Контент -->
+    <div class="content" id="app">
+        <!-- Карточка будет рендериться здесь -->
+    </div>
+
+    <!-- Кнопка добавления -->
+    <button class="fab" onclick="addNewGoal()">+</button>
+
+    <!-- Нижнее меню -->
+    <div class="bottom-nav">
+        <div class="nav-item active">🏠</div>
+        <div class="nav-item">📊</div>
+        <div class="nav-item">⚙️</div>
+    </div>
+
+    <script>
+        // Инициализация Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Разворачиваем на весь экран
+        tg.setHeaderColor('#006d5b'); // Цвет шапки под стиль приложения
+
+        // Данные (в реальном приложении тут будет база данных)
+        let goals = JSON.parse(localStorage.getItem('goals')) || [
+            {
+                id: 1,
+                title: "Любить лешу",
+                startDate: "2026-11-21",
+                endDate: "2054-04-07",
+                totalSeconds: 0,
+                isRunning: false,
+                lastStartTime: null
+            }
+        ];
+
+        let timerInterval;
+
+        // Функция сохранения
+        function save() {
+            localStorage.setItem('goals', JSON.stringify(goals));
+        }
+
+        // Определение уровня
+        function getLevel(hours) {
+            if (hours >= 10000) return 5; // Мастер
+            if (hours >= 5000) return 4;  // Эксперт
+            if (hours >= 2000) return 3;  // Профи
+            if (hours >= 500) return 2;   // Опытный
+            if (hours >= 100) return 1;   // Любитель
+            return 0;                     // Новичок
+        }
+
+        // Форматирование времени
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            return `${h} ч ${m} мин`;
+        }
+
+        // Отрисовка интерфейса
+        function render() {
+            const app = document.getElementById('app');
+            app.innerHTML = '';
+
+            goals.forEach(goal => {
+                const totalHours = goal.totalSeconds / 3600;
+                const percent = Math.min((totalHours / 10000) * 100, 100).toFixed(2);
+                const currentLevel = getLevel(totalHours);
+
+                // Если таймер запущен, считаем время в реальном времени
+                let displaySeconds = goal.totalSeconds;
+                if (goal.isRunning && goal.lastStartTime) {
+                    displaySeconds += Math.floor((Date.now() - goal.lastStartTime) / 1000);
+                }
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-title">${goal.title}</div>
+                    <div class="card-dates">с ${goal.startDate} по ${goal.endDate}</div>
+                    
+                    <div class="timer-controls">
+                        <button class="play-btn ${goal.isRunning ? 'running' : ''}" onclick="toggleTimer(${goal.id})">
+                            ${goal.isRunning ? '⏸' : '▶'}
+                        </button>
+                        <div>
+                            <div>${formatTime(displaySeconds)} / 10000 ч</div>
+                            <div style="font-size: 12px; color: #777;">Уровень: ${['Начинающий', 'Любитель', 'Опытный', 'Профи', 'Эксперт', 'Мастер'][currentLevel]}</div>
+                        </div>
+                    </div>
+
+                    <div class="progress-container">
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" style="width: ${percent}%"></div>
+                        </div>
+                        <div class="progress-text">${percent}%</div>
+                    </div>
+
+                    <div class="levels">
+                        <span class="level-icon ${currentLevel >= 0 ? 'active' : ''}">🟢</span>
+                        <span class="level-icon ${currentLevel >= 1 ? 'active' : ''}">🏆</span>
+                        <span class="level-icon ${currentLevel >= 2 ? 'active' : ''}">⭐</span>
+                        <span class="level-icon ${currentLevel >= 3 ? 'active' : ''}">💎</span>
+                        <span class="level-icon ${currentLevel >= 4 ? 'active' : ''}">👑</span>
+                    </div>
+                `;
+                app.appendChild(card);
+            });
+        }
+
+        // Управление таймером
+        function toggleTimer(id) {
+            const goal = goals.find(g => g.id === id);
+            
+            if (goal.isRunning) {
+                // Останавливаем
+                goal.isRunning = false;
+                goal.totalSeconds += Math.floor((Date.now() - goal.lastStartTime) / 1000);
+                goal.lastStartTime = null;
+            } else {
+                // Запускаем
+                goal.isRunning = true;
+                goal.lastStartTime = Date.now();
+            }
+            
+            save();
+            render();
+            startTicking();
+        }
+
+        // Обновление таймера на экране каждую секунду
+        function startTicking() {
+            clearInterval(timerInterval);
+            if (goals.some(g => g.isRunning)) {
+                timerInterval = setInterval(() => {
+                    render();
+                }, 1000);
+            }
+        }
+
+        // Добавление новой цели
+        function addNewGoal() {
+            const title = prompt("Введите название цели/навыка:");
+            if (title) {
+                goals.push({
+                    id: Date.now(),
+                    title: title,
+                    startDate: new Date().toISOString().split('T')[0],
+                    endDate: "2050-01-01",
+                    totalSeconds: 0,
+                    isRunning: false,
+                    lastStartTime: null
+                });
+                save();
+                render();
+            }
+        }
+
+        // Первичная отрисовка
+        render();
+        startTicking();
+    </script>
+</body>
+</html>
