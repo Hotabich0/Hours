@@ -159,15 +159,24 @@
     </div>
 
     <!-- ЭКРАН 2: ДЕТАЛИ -->
-    <div id="view-detail" class="hidden">
-        <div class="header-detail">
-            <button class="back-btn" id="btn-back">←</button>
-            <h1 id="detail-title">Название</h1>
+  <!-- ЭКРАН 2: ДЕТАЛИ -->
+<div id="view-detail" class="hidden">
+    <div class="header-detail" style="padding-bottom: 0;">
+        <div class="header-top-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; width: 100%;">
+            <button class="back-btn" id="btn-back" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0;">←</button>
+            <h1 id="detail-title" style="margin: 0; font-size: 18px; font-weight: 600; color: white;">Название</h1>
             <span style="width:24px;"></span>
         </div>
+        
+        <!-- ВОТ ОНИ, ВКЛАДКИ -->
+        <div class="tabs" style="display: flex; gap: 20px; margin-bottom: -1px;">
+            <div class="tab active" style="padding: 10px 0; color: white; font-size: 14px; font-weight: 500; border-bottom: 3px solid white; cursor: pointer; display: flex; align-items: center; gap: 6px;">📈 Статистика</div>
+            <div class="tab" style="padding: 10px 0; color: rgba(255,255,255,0.7); font-size: 14px; font-weight: 500; border-bottom: 3px solid transparent; cursor: pointer; display: flex; align-items: center; gap: 6px;">🕒 История</div>
+        </div>
+    </div>
 
-        <div class="content">
-            <div class="detail-info-list">
+    <div class="content">
+        <div class="detail-info-list">
                 <div class="info-row">
                     <span class="icon">📅</span>
                     <div id="detail-dates">с ... по ...</div>
