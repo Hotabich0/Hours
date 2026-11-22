@@ -227,13 +227,12 @@
     </div>
 
     <script>
-        // --- 1. БАЗА ДАННЫХ (v6) ---
-        var savedData = localStorage.getItem('masterhour_v6');
+        // --- 1. БАЗА ДАННЫХ (v7) ---
+        var savedData = localStorage.getItem('masterhour_v7');
         var goals = savedData ? JSON.parse(savedData) : [
             { id: 1, title: "Тест", startDate: "2026-11-22", endDate: "2050-01-01", totalSeconds: 0, isRunning: false, lastStartTime: null, history: {} }
         ];
 
-        // Проверка на наличие истории (для старых данных)
         goals.forEach(function(g) {
             if (!g.history) g.history = {};
         });
@@ -241,7 +240,7 @@
         var timerInterval;
         var currentDetailId = null;
 
-        function saveData() { localStorage.setItem('masterhour_v6', JSON.stringify(goals)); }
+        function saveData() { localStorage.setItem('masterhour_v7', JSON.stringify(goals)); }
 
         // --- 2. ВСПОМОГАТЕЛЬНЫЕ ---
         function formatTime(seconds) {
@@ -310,20 +309,22 @@
 
             for (var j = 0; j < goals.length; j++) {
                 var goal = goals[j];
-                var totalHours = goal.totalSeconds / 3600;
-                var perc = Math.min((totalHours / 10000) * 100, 100).toFixed(2);
-                var lvl = getLevelIndex(totalHours);
+                
                 var displaySec = goal.totalSeconds;
-
                 if (goal.isRunning && goal.lastStartTime) {
                     displaySec += Math.floor((Date.now() - goal.lastStartTime) / 1000);
                 }
+
+                var totalHours = displaySec / 3600;
+                var perc = Math.min((totalHours / 10000) * 100, 100).toFixed(2);
+                var lvl = getLevelIndex(totalHours);
 
                 var btn = document.getElementById('btn-play-' + goal.id);
                 if (btn) {
                     if (goal.isRunning) { btn.classList.add('running'); btn.innerHTML = '⏸'; }
                     else { btn.classList.remove('running'); btn.innerHTML = '▶'; }
                 }
+                
                 var tTime = document.getElementById('txt-time-' + goal.id);
                 if (tTime) tTime.innerHTML = formatTime(displaySec) + ' / 10000 ч';
 
@@ -332,6 +333,7 @@
                     var lvlNames = ['Начинающий', 'Любитель', 'Опытный', 'Профи', 'Эксперт', 'Мастер'];
                     tLvl.innerHTML = lvlNames[lvl];
                 }
+
                 var bar = document.getElementById('bar-' + goal.id);
                 if (bar) bar.style.width = perc + '%';
                 var tPerc = document.getElementById('txt-perc-' + goal.id);
@@ -379,7 +381,6 @@
                 else iconsBox[k].classList.remove('active');
             }
 
-            // График
             var chartBars = document.getElementById('chart-bars');
             chartBars.innerHTML = '';
             var days = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
@@ -425,7 +426,7 @@
         };
 
         // --- 6. ЛОГИКА ---
-        window.toggleTimer = function(id) {
+window.toggleTimer = function(id) {
             var goal = goals.find(function(g) { return g.id === id; });
             if (!goal) return;
 
@@ -433,7 +434,6 @@
                 var elapsed = Math.floor((Date.now() - goal.lastStartTime) / 1000);
                 goal.totalSeconds += elapsed;
                 
-                // Запись в историю с защитой
                 var today = getTodayStr();
                 if (!goal.history) goal.history = {}; 
                 goal.history[today] = (goal.history[today] || 0) + elapsed;
