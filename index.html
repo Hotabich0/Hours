@@ -422,4 +422,77 @@
         // --- 6. ЛОГИКА ---
         window.toggleTimer = function(id) {
             var goal = goals.find(function(g) { return g.id === id; });
-    
+            if (!goal) return;
+
+            if (goal.isRunning) {
+                var elapsed = Math.floor((Date.now() - goal.lastStartTime) / 1000);
+                goal.totalSeconds += elapsed;
+                var today = getTodayStr();
+                if(!goal.history) goal.history = {};
+                goal.history[today] = (goal.history[today] || 0) + elapsed;
+                goal.isRunning = false;
+                goal.lastStartTime = null;
+            } else {
+                goal.isRunning = true;
+                goal.lastStartTime = Date.now();
+            }
+            saveData();
+            if (currentDetailId === id) renderDetail();
+            else renderMain();
+            startTimer();
+        };
+
+        window.deleteGoal = function(id) {
+            if (confirm("Удалить цель?")) {
+                goals = goals.filter(function(g) { return g.id !== id; });
+                saveData();
+                renderMain();
+            }
+        };
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            var hasRunning = goals.some(function(g) { return g.isRunning; });
+            if (hasRunning) {
+                timerInterval = setInterval(function() {
+                    if (currentDetailId) renderDetail();
+                    else renderMain();
+                }, 1000);
+            }
+        }
+
+        // --- 7. МОДАЛКА ---
+        document.getElementById('btn-add-fab').onclick = function() {
+            document.getElementById('goalInput').value = '';
+            document.getElementById('modalOverlay').style.display = 'flex';
+        };
+
+        document.getElementById('btn-cancel').onclick = function() {
+            document.getElementById('modalOverlay').style.display = 'none';
+        };
+
+        document.getElementById('btn-save').onclick = function() {
+            var title = document.getElementById('goalInput').value.trim();
+            if (!title) return;
+            goals.push({
+                id: Date.now(),
+                title: title,
+                startDate: getTodayStr(),
+                endDate: "2050-01-01",
+                totalSeconds: 0,
+                isRunning: false,
+                lastStartTime: null,
+                history: {}
+            });
+            saveData();
+            document.getElementById('modalOverlay').style.display = 'none';
+            renderMain();
+        };
+
+        // --- СТАРТ ---
+        renderMain();
+        startTimer();
+        if (!savedData) saveData();
+    </script>
+</body>
+</html>
